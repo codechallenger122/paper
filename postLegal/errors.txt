@@ -1,0 +1,5 @@
+1. 실행 도중 visual studio 강제 종료 할 때 가끔..
+visual studio LNK1168: 쓰기용으로 열 수 없습니다 오류 날 수 있다.
+이경우
+
+cmd --> tasklist --> taskkill -f /pid processID 로 해결.
