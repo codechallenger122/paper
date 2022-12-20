@@ -1,5 +1,6 @@
 /*
   1. 변경 사항. queue.empty() 에서 moreImprove(isMoved) 로 변경.
+  --> 즉 runAlgorithm 에서 queue 가 모두 F 인 경우에 한 net 에 대한 procedure 를 종료
 */
 #include "functions.h"
 vector<vector<int>> genBlockMap(float blockX, float blockY, float siteX, float siteY) {
