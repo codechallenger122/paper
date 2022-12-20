@@ -1,3 +1,8 @@
+/* 
+         HPWL 계산방식을 center 기준으로 변경함.
+
+*/
+
 #include "functions.h"
 vector<vector<int>> genBlockMap(float blockX, float blockY, float siteX, float siteY) {
     int numOfRow = floor(blockY / siteY);
@@ -440,12 +445,13 @@ float getHPWLWithNewLeg(int net, vector<vector<int>>& cellsInNet, vector<vector<
             info = cellInfo[cells[i]];
         }
 
-        float xLL = info[0], yLL = info[1], xUR = xLL + info[4], yUR = yLL + info[5];
+        float xLL = info[0], yLL = info[1], xSize = info[4], ySize = info[5];
+        float xCenter = info[0] + info[4] / 2, yCenter = info[1] + info[5] / 2;
         //cout << xLL << " " << yLL << " " << xUR << " " << yUR << endl;
-        if (xLL < xMin) xMin = xLL;
-        if (yLL < yMin) yMin = yLL;
-        if (xUR > xMax) xMax = xUR;
-        if (yUR > yMax) yMax = yUR;
+        if (xCenter < xMin) xMin = xCenter;
+        if (yCenter < yMin) yMin = yCenter;
+        if (xCenter > xMax) xMax = xCenter;
+        if (yCenter > yMax) yMax = yCenter;
     }
     float HPWL = xMax - xMin + yMax - yMin;
     //cout << "net : " << net << "(" << xMax << " - " << xMin << ") + (" << yMax << " - " << yMin << ") = " << HPWL << endl;
@@ -477,15 +483,23 @@ tuple<float, int> calculateSwapCost(int nId, int cId, int scId, vector<vector<fl
         int net = netsInCell[cId][i];
         //HPWL_before += getHPWL(net, cellsInNet, cellInfo);
         HPWL_before += readHPWL(net, HPWLArch);
-        //cout << "\nbefore! < " << getHPWL(net, cellsInNet, cellInfo) << " - after > " << readHPWL(net, HPWLArch);
-        //if (getHPWL(net, cellsInNet, cellInfo) != readHPWL(net, HPWLArch)) cout << "mismatch detected" << endl;
+        
+        // (getHPWL(net, cellsInNet, cellInfo) != readHPWL(net, HPWLArch)) {
+        //    cout << "\nmismatch detected 1." << endl;
+        //    cout << "net = " << net << endl;
+        //    cout << "\nbefore! < " << getHPWL(net, cellsInNet, cellInfo) << " - after > " << readHPWL(net, HPWLArch);
+        //}
     }
     for (int i = 0; i < netsInCell[scId].size(); i++) {
         int net = netsInCell[scId][i];
         //HPWL_before += getHPWL(net, cellsInNet, cellInfo);
         HPWL_before += readHPWL(net, HPWLArch);
-        //cout << "\nbefore! < " << getHPWL(net, cellsInNet, cellInfo) << " - after > " << readHPWL(net, HPWLArch);
-        //if (getHPWL(net, cellsInNet, cellInfo) != readHPWL(net, HPWLArch)) cout << "mismatch detected" << endl;
+
+        //if (getHPWL(net, cellsInNet, cellInfo) != readHPWL(net, HPWLArch)) {
+        //    cout << "\nmismatch detected 2." << endl;
+        //    cout << "net = " << net << endl;
+        //    cout << "\nbefore! < " << getHPWL(net, cellsInNet, cellInfo) << " - after > " << readHPWL(net, HPWLArch);
+        //}
     }
 
     float HPWL_after = 0;
@@ -493,20 +507,21 @@ tuple<float, int> calculateSwapCost(int nId, int cId, int scId, vector<vector<fl
         int net = netsInCell[cId][i];
         //HPWL_after += getHPWLWithNewLeg(net, cellsInNet, cellInfo, cId, scId);
         HPWL_after += readModifiedHPWL(net, HPWLArch, cId, scId, cellInfo, cellsInNet);
-        //cout << "\nbefore.. " << getHPWLWithNewLeg(net, cellsInNet, cellInfo, cId, scId) << " after :" << readModifiedHPWL(net, HPWLArch, cId, scId, cellInfo, cellsInNet);
+
         //if (getHPWLWithNewLeg(net, cellsInNet, cellInfo, cId, scId) != readModifiedHPWL(net, HPWLArch, cId, scId, cellInfo, cellsInNet)) {
-        //    cout << "net = " << net << "cId = " << cId << "scId = " << scId << endl;
-        //    cout << "different result in modify\n " << getHPWLWithNewLeg(net, cellsInNet, cellInfo, cId, scId) << "\n" << readModifiedHPWL(net, HPWLArch, cId, scId, cellInfo, cellsInNet) << endl;
+        //    cout << "\nnet = " << net << "cId = " << cId << "scId = " << scId << endl;
+        //    cout << "\ndifferent result in modify 1 :" << getHPWLWithNewLeg(net, cellsInNet, cellInfo, cId, scId) << " and " << readModifiedHPWL(net, HPWLArch, cId, scId, cellInfo, cellsInNet) << endl;
         //}
     }
     //cout << HPWL_after << endl;
     for (int i = 0; i < netsInCell[scId].size(); i++) {
         int net = netsInCell[scId][i];
-        //HPWL_after += getHPWLWithNewLeg(net, cellsInNet, cellInfo, cId, scId);
+        //HPWL_after += getHPWLWithNewLeg(net, cellsInNet, cellInfo, scId, cId);
         HPWL_after += readModifiedHPWL(net, HPWLArch, scId, cId, cellInfo, cellsInNet);
-        //cout << "\nbefore.. " << getHPWLWithNewLeg(net, cellsInNet, cellInfo, cId, scId) << " after :" << readModifiedHPWL(net, HPWLArch, scId, cId, cellInfo, cellsInNet);
-        // if (getHPWLWithNewLeg(net, cellsInNet, cellInfo, cId, scId) != readModifiedHPWL(net, HPWLArch, cId, scId, cellInfo)) {
-        //    cout << "different result in modify\n " << getHPWLWithNewLeg(net, cellsInNet, cellInfo, cId, scId) << "\n" << readModifiedHPWL(net, HPWLArch, cId, scId, cellInfo) << endl;
+
+        //if (getHPWLWithNewLeg(net, cellsInNet, cellInfo, scId, cId) != readModifiedHPWL(net, HPWLArch, scId, cId, cellInfo, cellsInNet)) {
+        //    cout << "\nnet = " << net << "cId = " << cId << "scId = " << scId << endl;
+        //    cout << "\ndifferent result in modify 2 :" << getHPWLWithNewLeg(net, cellsInNet, cellInfo, scId, cId) << " and " << readModifiedHPWL(net, HPWLArch, scId, cId, cellInfo, cellsInNet) << endl;
         //}
     }
     float delta_HPWL = HPWL_after - HPWL_before;
@@ -585,8 +600,8 @@ vector<DataHPWL> genHPWLArch(vector<vector<int>>& cellsInNet, vector<vector<floa
         for (int cell : cellsInNet[net]) {
             vector<float> info = cellInfo[cell];
             float xLeg = info[0], yLeg = info[1], xSize = info[4], ySize = info[5];
-            float xCenter = xLeg + xSize;
-            float yCenter = yLeg + ySize;
+            float xCenter = xLeg + xSize/2;
+            float yCenter = yLeg + ySize/2;
 
             if (xCenter < xMin) {
                 xMinSub = xMin;
@@ -715,7 +730,6 @@ void updateHPWL_try(int cId, int scId_picked, vector<vector<int>>& cellsInNet, v
         cout << "net : " << net << "'s HPWL = " << readModifiedHPWL(net, HPWLArch, cId, scId_picked, cellInfo, cellsInNet) << endl;
         cout << HPWL_after << endl;
     }
-
     for (int i = 0; i < netsInCell[scId_picked].size(); i++) {
         int net = netsInCell[scId_picked][i];
         HPWL_after += readModifiedHPWL(net, HPWLArch, scId_picked, cId, cellInfo, cellsInNet);
@@ -743,7 +757,7 @@ void updateHPWL_try(int cId, int scId_picked, vector<vector<int>>& cellsInNet, v
         for (int cell : cellsInNet[net]) {
             vector<float> info = cellInfo[cell];
             float xLL = info[0], yLL = info[1], xSize = info[4], ySize = info[5];
-            float xCenter = xLL + xSize/2, yCenter = xLL + ySize/2;
+            float xCenter = xLL + xSize / 2, yCenter = yLL + ySize / 2;
             //cout << xLL << " " << yLL << " " << xUR << " " << yUR << endl;
             if (xCenter < xMin) {
                 xMinSub = xMin;
@@ -784,7 +798,7 @@ void updateHPWL_try(int cId, int scId_picked, vector<vector<int>>& cellsInNet, v
         for (int cell : cellsInNet[net]) {
             vector<float> info = cellInfo[cell];
             float xLL = info[0], yLL = info[1], xSize = info[4], ySize = info[5];
-            float xCenter = xLL + xSize / 2, yCenter = xLL + ySize / 2;
+            float xCenter = xLL + xSize / 2, yCenter = yLL + ySize / 2;
             //cout << xLL << " " << yLL << " " << xUR << " " << yUR << endl;
             if (xCenter < xMin) {
                 xMinSub = xMin;
@@ -961,7 +975,7 @@ void checkEncrytion(vector<vector<string>> dataList, string dataListName) {
 }
 map<int, bool> genBoolMap(queue<int> queue) {
     map<int, bool> isMoved;
-    while(!queue.empty()) {
+    while (!queue.empty()) {
         isMoved.insert(make_pair(queue.front(), true));
         queue.pop();
     }
@@ -990,7 +1004,7 @@ void runAlgorithm_try(vector<tuple<int, float>>& dataHPWL, vector<vector<int>>& 
         int nId = get<0>(dataHPWL[i]);
         float HPWL = get<1>(dataHPWL[i]);
         std::cout << "net : " << nId << " : " << i << "th, " << netName[nId] << " is processing...   HPWL ="
-             << HPWL << "  net 당 cell 개수 = " << cellsInNet[nId].size() << endl;
+            << HPWL << "  net 당 cell 개수 = " << cellsInNet[nId].size() << endl;
         if (cellsInNet[nId].size() > 50) continue;
 
         vector<int> windowHPWL = getWindowHPWL(nId, cellsInNet, cellInfo, siteX, siteY); // xmin, xmax, ymin, ymax <-- int 단위로.
@@ -998,7 +1012,7 @@ void runAlgorithm_try(vector<tuple<int, float>>& dataHPWL, vector<vector<int>>& 
         map<int, bool> isMoved = genBoolMap(queue);
         vector<int> modifiedCells; // add 22. 11. 15. fix net swap argument cells of net.
         //while (!queue.empty()) {
-        while(moreImprove(isMoved)){
+        while (moreImprove(isMoved)) {
             int cId = queue.front();
             queue.pop();
             vector<tuple<int, int>> windowCell = getWindowCell(windowHPWL, cId, cellInfo, siteX, siteY, marginA, blockCellMap, maxDisp);
@@ -1031,11 +1045,11 @@ void runAlgorithm_try(vector<tuple<int, float>>& dataHPWL, vector<vector<int>>& 
 
                 int scId_picked = get<1>(cost[0]);
                 cout << "\n 따라서." << cId << " 를 " << scId_picked << " 로 swap 한다. !! HPWL decreased by" << get<0>(cost[0]) << endl;
-                
+
                 updateHPWL_try(cId, scId_picked, cellsInNet, netsInCell, cellInfo, HPWLArch, siteX, siteY, blockCellMap, blockAreaMap);
                 //queue.push(cId);
                 isMoved[cId] = true;
-                if (find(modifiedCells.begin(), modifiedCells.end(), cId) == modifiedCells.end()) 
+                if (find(modifiedCells.begin(), modifiedCells.end(), cId) == modifiedCells.end())
                     modifiedCells.push_back(cId);// add 22. 11. 15. fix net swap argument cells of net.
             }
             queue.push(cId);
