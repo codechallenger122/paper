@@ -1,8 +1,24 @@
-/* 
-         HPWL 계산방식을 center 기준으로 변경함.
+/*
+# 22. 12. 19. 코드 변경 사항
+1. Queue 방식 변경
+  - Queue 에 추가된 cell 들이 moved 되었을 때 모두 improved false 가 나오면 정지하기. 
+  Q = { 1, 2, 3, 4}  ←  T, T, T, T 
+  Q 에서 빼고 다시 넣을 때, improved(moved) 되었으면 T.
+  Q 에서 빼고 다시 넣을 때, not moved 면 F.
+  → Q 에 있는 cell 들이 모두 F, F, F, F 일 경우에 stop 한다.
+// 반영 완료
 
+# 22. 12. 20. (화) 코드 변경 사항
+1. HPWL 계산법 변경 
+   - boundary 기준에서 center 기준으로 변경.
+     → readHPWL, readModifiedHPWL 문제가 있음.. 아직 해결 못함.
+
+# 22. 12. 21. (수) 코드 개선 사항
+1. 초기 |HPWL| 기준으로 sorting 된 net 들을 move 등의 원인으로 
+   |HPWL| 이 달라지면, update 한다. ← Priority Queue
+
+2. place 이후 cell 별로 assign 된 좌표 output 으로 내뱉기
 */
-
 #include "functions.h"
 vector<vector<int>> genBlockMap(float blockX, float blockY, float siteX, float siteY) {
     int numOfRow = floor(blockY / siteY);
@@ -999,12 +1015,20 @@ void runAlgorithm_try(vector<tuple<int, float>>& dataHPWL, vector<vector<int>>& 
     float marginB, float maxDisp, vector<DataHPWL>& HPWLArch, int netIter,
     vector<vector<int>>& blockAreaMap, int numOfRow, int numOfCol) {
 
+    MaxHeap h = MaxHeap(cellsInNet, cellInfo);
+    Node n;
+
     //for(auto i=2284;i<2285;i++){
     for (auto i = 0; i < netIter; i++) {
-        int nId = get<0>(dataHPWL[i]);
-        float HPWL = get<1>(dataHPWL[i]);
+        //int nId = get<0>(dataHPWL[i]);
+        //float HPWL = get<1>(dataHPWL[i]);
+        n = h.popData();
+        int nId = n.net; 
+        float HPWL = n.HPWL;
+
         std::cout << "net : " << nId << " : " << i << "th, " << netName[nId] << " is processing...   HPWL ="
             << HPWL << "  net 당 cell 개수 = " << cellsInNet[nId].size() << endl;
+
         if (cellsInNet[nId].size() > 50) continue;
 
         vector<int> windowHPWL = getWindowHPWL(nId, cellsInNet, cellInfo, siteX, siteY); // xmin, xmax, ymin, ymax <-- int 단위로.
@@ -1056,7 +1080,100 @@ void runAlgorithm_try(vector<tuple<int, float>>& dataHPWL, vector<vector<int>>& 
         }
         // add 22. 11. 15. fix net swap argument cells of net.
         for (int i = 0; i < modifiedCells.size(); i++) validCell[i] = false;
+
+        // add 22. 12. 21. Heap
+        vector<int> modificedNets;
+        for (int i = 0; i < modifiedCells.size(); i++) {
+            int cell = modifiedCells[i];
+            for (int i = 0; i< netsInCell[cell].size(); i++) {
+                int net = netsInCell[cell][i];
+                if (find(modificedNets.begin(), modificedNets.end(), net) == modificedNets.end()) {
+                    modificedNets.push_back(net);
+                }
+            }
+        }
+        for (int i = 0; i < modificedNets.size(); i++) {
+            h.decreaseKey(modificedNets[i]);
+            //cout << "modified net : " << modificedNets[i] << endl;
+        }
+        modificedNets.clear();
     }
     std::cout << "after procedure, avg displacement = " << getAvgDisplace(cellInfo) << endl;
     std::cout << "after procedure, avg HPWL = " << getAvgHPWL(cellsInNet, cellInfo) << endl;
 }
+
+    MaxHeap::MaxHeap(vector<vector<int>>& cellsInNet, vector<vector<float>>& cellInfo) {
+        this->cellsInNet = cellsInNet;
+        this->cellInfo = cellInfo;
+        heapSize = cellsInNet.size();
+        data = vector<Node>(heapSize + 1);
+        for (int nId = 0; nId < heapSize; nId++) {
+            Node node;
+            node.net = nId; node.HPWL = getHPWL(nId, cellsInNet, cellInfo);
+            data[nId + 1] = node;
+        }
+        buildMaxHeap();
+        updateNetMap();
+    }
+    void MaxHeap::buildMaxHeap() {
+        for (int idx = heapSize /2; idx > 0; idx--) maxHeapify(idx);
+    }
+    void MaxHeap::maxHeapify(int idx) {
+        int left = idx * 2;
+        int right = idx * 2 + 1;
+        int largest = idx;
+        if (left <= heapSize && data[left].HPWL > data[largest].HPWL) largest = left;
+        if (right <= heapSize && data[right].HPWL > data[largest].HPWL) largest = right;
+        if (largest != idx) {
+            //cout << data[idx].HPWL << "보다 " << data[largest].HPWL << "가 커서 변경한다.\n";
+            swapNode(idx, largest);
+            //cout << data[idx].HPWL << "보다 " << data[largest].HPWL << "가 이제 더 작다.\n";
+            maxHeapify(largest);
+        }
+    }
+    void MaxHeap::swapNode(int idx, int largest) {
+        Node idxNode = data[idx];
+        Node largestNode = data[largest];
+        data[idx] = largestNode;
+        data[largest] = idxNode;
+    }
+    void MaxHeap::display() {
+        for (int i = heapSize-5; i < heapSize+1; i++) {
+            std::cout << "net : " << data[i].net << "\nHPWL : " << data[i].HPWL << "\n\n";
+        }
+    }
+    void MaxHeap::updateNetMap() {
+        for (int idx = 1; idx < heapSize + 1; idx++) {
+            netMap[data[idx].net] = idx;
+        }
+    }
+    void MaxHeap::maxHeapifyDecrease(int idx) {
+        int left = idx * 2;
+        int right = idx * 2 + 1;
+        int largest = idx;
+        if (left <= heapSize && data[left].HPWL > data[largest].HPWL) largest = left;
+        if (right <= heapSize && data[right].HPWL > data[largest].HPWL) largest = right;
+        if (largest != idx) {
+            //cout << data[idx].HPWL << "보다 " << data[largest].HPWL << "가 커서 변경한다.\n";
+            swapNode(idx, largest);
+            //cout << data[idx].HPWL << "보다 " << data[largest].HPWL << "가 이제 더 작다.\n";
+            netMap[data[idx].net] = idx;
+            netMap[data[largest].net] = largest;
+            maxHeapifyDecrease(largest);
+        }
+    }
+    void MaxHeap::decreaseKey(int net) {
+        int idx = netMap[net];
+        data[idx].HPWL = getHPWL(net, cellsInNet, cellInfo);
+        maxHeapifyDecrease(idx);
+    }
+    
+    Node MaxHeap::popData() {
+        Node output = data[1];
+        data[1].HPWL = data[heapSize].HPWL;
+        data[1].net = data[heapSize].net;
+        heapSize = heapSize - 1;
+        maxHeapifyDecrease(1);
+        return output;
+    }
+
